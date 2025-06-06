@@ -700,8 +700,8 @@ func (self *Client) Describe() (streams []sdp.Media, err error) {
 	self.streams = []*Stream{}
 	for _, media := range medias {
 		stream := &Stream{Sdp: media, client: self}
-		if err = stream.makeCodecData(); err != nil && DebugRtsp {
-			fmt.Println("rtsp: makeCodecData error", err)
+		if codecErr := stream.makeCodecData(); codecErr != nil && DebugRtsp {
+			fmt.Println("rtsp: makeCodecData error", codecErr)
 		}
 		self.streams = append(self.streams, stream)
 		streams = append(streams, media)
