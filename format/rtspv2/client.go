@@ -79,9 +79,9 @@ type RTSPClient struct {
 	fuStarted           bool
 	options             RTSPClientOptions
 	BufferRtpPacket     *bytes.Buffer
-	vps                 []byte
-	sps                 []byte
-	pps                 []byte
+	Vps                 []byte
+	Sps                 []byte
+	Pps                 []byte
 	CodecData           []av.CodecData
 	AudioTimeLine       time.Duration
 	AudioTimeScale      int64
@@ -166,8 +166,8 @@ func Dial(options RTSPClientOptions) (*RTSPClient, error) {
 			if i2.Type == av.H264 {
 				if len(i2.SpropParameterSets) > 1 {
 					if codecData, err := h264parser.NewCodecDataFromSPSAndPPS(i2.SpropParameterSets[0], i2.SpropParameterSets[1]); err == nil {
-						client.sps = i2.SpropParameterSets[0]
-						client.pps = i2.SpropParameterSets[1]
+						client.Sps = i2.SpropParameterSets[0]
+						client.Pps = i2.SpropParameterSets[1]
 						client.CodecData = append(client.CodecData, codecData)
 					}
 				} else {
@@ -179,9 +179,9 @@ func Dial(options RTSPClientOptions) (*RTSPClient, error) {
 			} else if i2.Type == av.H265 {
 				if len(i2.SpropVPS) > 1 && len(i2.SpropSPS) > 1 && len(i2.SpropPPS) > 1 {
 					if codecData, err := h265parser.NewCodecDataFromVPSAndSPSAndPPS(i2.SpropVPS, i2.SpropSPS, i2.SpropPPS); err == nil {
-						client.vps = i2.SpropVPS
-						client.sps = i2.SpropSPS
-						client.pps = i2.SpropPPS
+						client.Vps = i2.SpropVPS
+						client.Sps = i2.SpropSPS
+						client.Pps = i2.SpropPPS
 						client.CodecData = append(client.CodecData, codecData)
 					}
 				} else {
@@ -845,11 +845,11 @@ func (client *RTSPClient) CodecUpdateSPS(val []byte) {
 	if client.videoCodec != av.H264 && client.videoCodec != av.H265 {
 		return
 	}
-	if bytes.Compare(val, client.sps) == 0 {
+	if bytes.Compare(val, client.Sps) == 0 {
 		return
 	}
-	client.sps = val
-	if (client.videoCodec == av.H264 && len(client.pps) == 0) || (client.videoCodec == av.H265 && (len(client.vps) == 0 || len(client.pps) == 0)) {
+	client.Sps = val
+	if (client.videoCodec == av.H264 && len(client.Pps) == 0) || (client.videoCodec == av.H265 && (len(client.Vps) == 0 || len(client.Pps) == 0)) {
 		return
 	}
 	var codecData av.VideoCodecData
@@ -857,13 +857,13 @@ func (client *RTSPClient) CodecUpdateSPS(val []byte) {
 	switch client.videoCodec {
 	case av.H264:
 		client.Println("Codec Update SPS", val)
-		codecData, err = h264parser.NewCodecDataFromSPSAndPPS(val, client.pps)
+		codecData, err = h264parser.NewCodecDataFromSPSAndPPS(val, client.Pps)
 		if err != nil {
 			client.Println("Parse Codec Data Error", err)
 			return
 		}
 	case av.H265:
-		codecData, err = h265parser.NewCodecDataFromVPSAndSPSAndPPS(client.vps, val, client.pps)
+		codecData, err = h265parser.NewCodecDataFromVPSAndSPSAndPPS(client.Vps, val, client.Pps)
 		if err != nil {
 			client.Println("Parse Codec Data Error", err)
 			return
@@ -885,11 +885,11 @@ func (client *RTSPClient) CodecUpdatePPS(val []byte) {
 	if client.videoCodec != av.H264 && client.videoCodec != av.H265 {
 		return
 	}
-	if bytes.Compare(val, client.pps) == 0 {
+	if bytes.Compare(val, client.Pps) == 0 {
 		return
 	}
-	client.pps = val
-	if (client.videoCodec == av.H264 && len(client.sps) == 0) || (client.videoCodec == av.H265 && (len(client.vps) == 0 || len(client.sps) == 0)) {
+	client.Pps = val
+	if (client.videoCodec == av.H264 && len(client.Sps) == 0) || (client.videoCodec == av.H265 && (len(client.Vps) == 0 || len(client.Sps) == 0)) {
 		return
 	}
 	var codecData av.VideoCodecData
@@ -897,13 +897,13 @@ func (client *RTSPClient) CodecUpdatePPS(val []byte) {
 	switch client.videoCodec {
 	case av.H264:
 		client.Println("Codec Update PPS", val)
-		codecData, err = h264parser.NewCodecDataFromSPSAndPPS(client.sps, val)
+		codecData, err = h264parser.NewCodecDataFromSPSAndPPS(client.Sps, val)
 		if err != nil {
 			client.Println("Parse Codec Data Error", err)
 			return
 		}
 	case av.H265:
-		codecData, err = h265parser.NewCodecDataFromVPSAndSPSAndPPS(client.vps, client.sps, val)
+		codecData, err = h265parser.NewCodecDataFromVPSAndSPSAndPPS(client.Vps, client.Sps, val)
 		if err != nil {
 			client.Println("Parse Codec Data Error", err)
 			return
@@ -925,14 +925,14 @@ func (client *RTSPClient) CodecUpdateVPS(val []byte) {
 	if client.videoCodec != av.H265 {
 		return
 	}
-	if bytes.Compare(val, client.vps) == 0 {
+	if bytes.Compare(val, client.Vps) == 0 {
 		return
 	}
-	client.vps = val
-	if len(client.sps) == 0 || len(client.pps) == 0 {
+	client.Vps = val
+	if len(client.Sps) == 0 || len(client.Pps) == 0 {
 		return
 	}
-	codecData, err := h265parser.NewCodecDataFromVPSAndSPSAndPPS(val, client.sps, client.pps)
+	codecData, err := h265parser.NewCodecDataFromVPSAndSPSAndPPS(val, client.Sps, client.Pps)
 	if err != nil {
 		client.Println("Parse Codec Data Error", err)
 		return
