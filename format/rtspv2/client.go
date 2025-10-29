@@ -93,6 +93,7 @@ type RTSPClient struct {
 	FPS                 int
 	WaitCodec           bool
 	chTMP               int
+	RtpKeepAliveTimeoutSeconds uint8
 }
 
 type RTSPClientOptions struct {
@@ -118,6 +119,7 @@ func Dial(options RTSPClientOptions) (*RTSPClient, error) {
 		audioIDX:            -2,
 		options:             options,
 		AudioTimeScale:      8000,
+		RtpKeepAliveTimeoutSeconds: 10,
 	}
 	client.headers["User-Agent"] = "Lavf58.76.100"
 	err := client.parseURL(html.UnescapeString(client.options.URL))
@@ -268,7 +270,7 @@ func (client *RTSPClient) startStream() {
 			client.Println("RTSP Client RTP SetDeadline", err)
 			return
 		}
-		if int(time.Now().Sub(timer).Seconds()) > 25 {
+		if int(time.Now().Sub(timer).Seconds()) > int(client.RtpKeepAliveTimeoutSeconds) {
 			err := client.request(OPTIONS, map[string]string{"Require": "implicit-play"}, client.control, false, true)
 			if err != nil {
 				client.Println("RTSP Client RTP keep-alive", err)
